@@ -1,0 +1,64 @@
+---
+title: "World Rank of a University"
+author: "Rohit Kamat"
+date: "May 12, 2016"
+output: html_document
+---
+
+The code below was used to determine if alumni and Awards account for a significantly greater proportion of variance in the total score for determining the world rank of a university after controlling Nature and Science Score.
+
+
+```{r}
+library(SDSRegressionR)
+library(psych)
+
+#Import the College Data
+college <- read.csv("/Volumes/USB20FD/Applied Regression Analysis/Data/shanghaiData.csv")
+
+#Run the Initial Model
+college_lm <- lm(total_score ~ ns + pub + alumni + award, college)
+summary(college_lm)
+
+#Remove the Outliers
+library(car)
+vif(college_lm)
+cooksPlot(college_lm, print.obs = TRUE, sort.obs = TRUE, save.cutoff=TRUE)
+threeOuts(college_lm)
+# Three Outs Outliers = 18
+g_college <- college[!row.names(college) %in%c(3521,3021,4403,2521,3805,2015,2021,3804,1512,1002,3020,3520,2520,506,3903,6,3800,2517),]
+```
+
+
+```{r}
+#Rerun the Final Model
+new_college_lm<-lm(total_score ~ ns + pub + alumni + award, g_college)
+summary(new_college_lm)
+
+#Tag the Observation in the model. Keep the observation in the model
+g_college$in_new_college_lm<- tagObs(new_college_lm)
+g_college_full<- g_college[which(g_college$in_new_college_lm == 1), ]
+sum(g_college_full$in_new_college_lm) #Double Check
+
+#Now I will perform the sequential regression. First we will perform the model with just our nuisance variables.
+m1_seq<- lm(total_score ~ ns + pub, g_college_full)
+summary(m1_seq)
+summary(m1_seq)$r.squared
+lmBeta(m1_seq)
+pCorr(m1_seq)
+
+#Now we will perform the model with the variable of interest.
+m2_seq <- lm(total_score ~ ns + pub + alumni + award , g_college_full)
+summary(m2_seq)
+summary(m2_seq)$r.squared
+summary(m2_seq)$r.squared - summary(m1_seq)$r.squared #Difference of Variance between the variables of interest and the nuisance variables.
+
+#Perform the anova to find the significance of variance change
+anova(m1_seq, m2_seq)
+
+#Find the Best Predictor of total score for college ranking
+lmBeta(m2_seq)
+
+#How much unique variance of total college score
+pCorr(m2_seq)
+```
+
