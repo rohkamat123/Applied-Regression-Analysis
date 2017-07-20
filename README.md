@@ -1,1 +1,1 @@
-# rohizzle
+I took Applied Regression Analysis.
